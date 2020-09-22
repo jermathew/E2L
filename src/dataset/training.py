@@ -88,7 +88,7 @@ class TrainingCorpus(object):
     @staticmethod
     def tokenize(text):
         t = re.sub(r'(?<=\S)\.(?=\w)', '. ', text)
-        return [x for x in word_tokenize(t) if Corpus._check(x)]
+        return [x for x in word_tokenize(t) if TrainingCorpus._check(x)]
 
     def get_text(self, document_id: int) -> str:
         try:
