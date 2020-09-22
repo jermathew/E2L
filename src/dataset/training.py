@@ -189,9 +189,9 @@ class TrainingCorpus(object):
                 y[self._index[doc], self._label_index[a]] = 1
         return y
 
-    def get_train_test_data(self, test_size: float = 0.2) -> tuple:
+    def get_train_test_data(self, test_size: float = 0.2, random_state=3) -> tuple:
         y = self.get_one_hot_target()
-        X_train, X_test, y_train, y_test = train_test_split(self.docs, y, test_size=test_size)
+        X_train, X_test, y_train, y_test = train_test_split(self.docs, y, test_size=test_size, random_state=random_state)
         return X_train, X_test, y_train, y_test
 
 
