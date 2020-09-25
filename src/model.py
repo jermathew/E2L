@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from dataset.training import TrainingCorpus
+from training import TrainingCorpus
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import load_model
 

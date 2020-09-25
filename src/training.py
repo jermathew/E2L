@@ -116,8 +116,9 @@ class TrainingCorpus(object):
             chunks = []
             for chunk in nlp(text).noun_chunks:
                 c = "_".join(self.tokenize(chunk.text))
-                chunks.append(c)
-                self.noun_chunks[c] += 1
+                if c:
+                    chunks.append(c)
+                    self.noun_chunks[c] += 1
             self.document_chunks[self.docs[i]] = chunks
 
     @staticmethod

@@ -3,8 +3,8 @@ import pandas as pd
 from typing import List, Union, Dict
 from lime.explanation import Explanation
 from lime.lime_text import LimeTextExplainer
-from dataset.training import TrainingCorpus
-from model_wrapper.model import Model
+from training import TrainingCorpus
+from model import Model
 
 
 class LimeTermFinder(object):
