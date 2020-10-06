@@ -120,7 +120,7 @@ class TensorflowModel(Model):
         return predict_matrix
 
     def __tokens_to_sequence(self,
-                             text_tokens: List[str]) -> np.ndarray:
+                           text_tokens: List[str]) -> np.ndarray:
         """
         Converts a list of strings into a list of
         integer sequences according to `self.word_to_idx_map`
