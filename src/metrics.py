@@ -1,0 +1,110 @@
+root_dir = '../..'
+src_dir = 'src'
+
+import os
+import sys
+
+sys.path.append(os.path.join(root_dir, src_dir))
+
+from training import TrainingCorpus
+
+def compute_fscore(p, r, beta):
+    try:
+        return (1 + beta**2) * p * r/(beta**2 * p + r)
+    except:
+        return 0
+    
+def compute_metrics(entity_id, gt_dict, terms):
+    size = terms.shape[0]
+    target_tokens = TrainingCorpus.tokenize(gt_dict[entity_id].lower())
+    target_tokens_len = len(target_tokens)
+    
+    tokens_count = 0
+    tokens_found = []
+    
+    precision_list = []
+    recall_list = []
+    f1score_list = []
+    f2score_list = []
+    f05score_list = []
+    
+    for i in range(size):
+        selected_terms = terms[i].split()
+        
+        for term in selected_terms:
+            tokens_count += 1
+            if term in target_tokens and term not in tokens_found:
+                tokens_found.append(term)
+        
+        precision = len(tokens_found)/tokens_count
+        precision_list.append(precision)
+        
+        recall = len(tokens_found)/target_tokens_len
+        recall_list.append(recall)
+
+        f1score = compute_fscore(precision, recall, 1)
+        f1score_list.append(f1score)
+        
+        f2score = compute_fscore(precision, recall, 2)
+        f2score_list.append(f2score)
+        
+        f05score = compute_fscore(precision, recall, 0.5)
+        f05score_list.append(f05score)
+    
+    metrics_dict = {}
+    metrics_dict['entity'] = entity_id
+    metrics_dict['k_recall'] = None
+    metrics_dict['max_f1scores'] = []
+    metrics_dict['k_f1score'] = None
+    metrics_dict['max_f2scores'] = []
+    metrics_dict['max_f05scores'] = []
+    metrics_dict['max_recall'] = None
+    metrics_dict['max_precision'] = None
+    
+    # compute k_recall
+    k_recall_threshold = 0.9
+    not_found = True
+    i = 0
+    while i < size and not_found:
+        if recall_list[i] > 0.9:
+            not_found = False
+            metrics_dict['k_recall'] = i + 1 # starts from 0
+        i += 1
+    
+    # compute max_f1scores
+    max_f1score = -1
+    for i in range(size):
+        if f1score_list[i] > max_f1score:
+            max_f1score = f1score_list[i]
+        metrics_dict['max_f1scores'].append(max_f1score)
+    
+    # compute k_f1score
+    metrics_dict['k_f1score'] = max(list(range(size)), key=lambda i: f1score_list[i])
+    
+    # compute max_f2scores
+    max_f2score = -1
+    for i in range(size):
+        if f2score_list[i] > max_f2score:
+            max_f2score = f2score_list[i]
+        metrics_dict['max_f2scores'].append(max_f2score) 
+    
+    # compute max_f05scores
+    max_f05score = -1
+    for i in range(size):
+        if f05score_list[i] > max_f05score:
+            max_f05score = f05score_list[i]
+        metrics_dict['max_f05scores'].append(max_f05score)
+    
+    # compute max_recall
+    p_threshold = 0.9
+    selected_idxs = [idx for idx, p in enumerate(precision_list) if p > p_threshold]
+    if selected_idxs:
+        metrics_dict['max_recall'] = max([recall_list[idx] for idx in selected_idxs])
+    
+    # compute max_precision
+    r_threshold = 0.9
+    selected_idxs = [idx for idx, r in enumerate(recall_list) if r > r_threshold]
+    if selected_idxs:
+        metrics_dict['max_precision'] = max([precision_list[idx] for idx in selected_idxs])
+    
+    return metrics_dict 
