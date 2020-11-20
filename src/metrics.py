@@ -34,9 +34,12 @@ def compute_metrics(entity_id, gt_dict, terms, tidy_text=True):
         selected_terms = terms[i].split()
         
         for term in selected_terms:
-            tokens_count += 1
-            if term in target_tokens and term not in tokens_found:
-                tokens_found.append(term)
+            if term in target_tokens:
+                if term not in tokens_found:
+                    tokens_found.append(term)
+                    tokens_count += 1
+            else:
+                tokens_count += 1
         
         precision = len(tokens_found)/tokens_count
         precision_list.append(precision)
