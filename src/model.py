@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 import pandas as pd
 from abc import ABC, abstractmethod
@@ -156,3 +157,62 @@ class TensorflowModel(Model):
             [sequence], maxlen=self.input_len).reshape(-1)
 
         return padded_sequence
+
+
+class TensorflowTfIdfModel(Model):
+
+    def __init__(self, 
+                 model_filepath: str, 
+                 vectorizer_filepath: str):
+        
+        model = load_model(model_filepath)
+        self.input_len = model.input.shape[1]
+        with open(vectorizer_filepath, 'rb') as fp:
+            self.vectorizer = pickle.load(fp)
+        super().__init__(model)
+
+
+    def label_to_data_idx(self,
+                          data: TrainingCorpus) -> Dict[int, List[int]]:
+
+        label_to_data_idx_map = defaultdict(list)
+
+        docs_tokens = [data.get_tokens(doc_id) for doc_id in data.docs]
+        input_data = np.array([self.__vectorize_text(
+            doc_tokens) for doc_tokens in docs_tokens])
+        predictions = self.model.predict(input_data)
+        # round to the nearest integer
+        predictions = np.rint(predictions)
+        nonzeros = predictions.nonzero()
+
+        for data_idx, label_idx in zip(*nonzeros):
+            label_to_data_idx_map[label_idx].append(data_idx)
+
+        return label_to_data_idx_map
+    
+
+    def predict_fn(self,
+                   texts: List[str]) -> np.ndarray:
+
+        input_data = np.array([self.__vectorize_text(text) for text in texts])
+        predict_matrix = self.model.predict(input_data)
+        return predict_matrix
+    
+    
+    def __vectorize_text(self, 
+                         text: str)-> np.ndarray:
+        
+        words = text.split()
+        tokens = []
+        
+        # split words into single terms
+        for term in words:
+            if '_' in term:
+                # term is a noun chunk
+                tokens += term.split('_')
+            else:
+                # term is a single word/term
+                tokens.append(term)
+        
+        text_vector = self.vectorizer.transform(tokens)
+        return text_vector
