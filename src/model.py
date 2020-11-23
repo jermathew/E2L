@@ -1,4 +1,4 @@
-import pickle
+import dill
 import numpy as np
 import pandas as pd
 from abc import ABC, abstractmethod
@@ -168,7 +168,7 @@ class TensorflowTfIdfModel(Model):
         model = load_model(model_filepath)
         self.input_len = model.input.shape[1]
         with open(vectorizer_filepath, 'rb') as fp:
-            self.vectorizer = pickle.load(fp)
+            self.vectorizer = dill.load(fp)
         super().__init__(model)
 
 
@@ -194,15 +194,14 @@ class TensorflowTfIdfModel(Model):
     def predict_fn(self,
                    texts: List[str]) -> np.ndarray:
 
-        input_data = np.array([self.__vectorize_text(text) for text in texts])
+        input_data = np.array([self.__vectorize_text(text.split()) for text in texts])
         predict_matrix = self.model.predict(input_data)
         return predict_matrix
     
     
     def __vectorize_text(self, 
-                         text: str)-> np.ndarray:
+                         words: List[str])-> np.ndarray:
         
-        words = text.split()
         tokens = []
         
         # split words into single terms
@@ -214,5 +213,5 @@ class TensorflowTfIdfModel(Model):
                 # term is a single word/term
                 tokens.append(term)
         
-        text_vector = self.vectorizer.transform(tokens)
+        text_vector = self.vectorizer.transform([' '.join(tokens)]).toarray().reshape(-1)
         return text_vector
