@@ -55,7 +55,7 @@ def show_barplot(data_x, data_y, x_label, y_label, use_plotly, figsize=(16,8)):
         ax.bar(sorted_x, sorted_y)
         plt.xlabel(x_label)
         plt.ylabel(y_label)
-        fig.autofmt_xdate()
+        plt.xticks(rotation=90)
         fig.show()
         
     
