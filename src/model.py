@@ -1,6 +1,7 @@
 import dill
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List
 from abc import ABC, abstractmethod
@@ -8,6 +9,8 @@ from collections import defaultdict
 from training import TrainingCorpus
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import load_model
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch.nn.functional as F
 
 __pdoc__ = {}
 __pdoc__['Model.__init__'] = 'Abstract class for wrapping classification models'
@@ -215,3 +218,65 @@ class TensorflowTfIdfModel(Model):
         
         text_vector = self.vectorizer.transform([' '.join(tokens)]).toarray().reshape(-1)
         return text_vector
+
+    
+class BertModel(Model):
+
+    def __init__(self, 
+                 dir_path: str):
+        
+        self.tokenizer = AutoTokenizer.from_pretrained(dir_path)
+        model = AutoModelForSequenceClassification.from_pretrained(dir_path, from_tf=True)
+        super().__init__(model)
+
+
+    def label_to_data_idx(self,
+                          data: TrainingCorpus) -> Dict[int, List[int]]:
+
+        label_to_data_idx_map = defaultdict(list)
+        
+        encoded_data = self.tokenizer([' '.join(data.get_tokens(doc_id)) for doc_id in data.docs],
+                                      padding=True, 
+                                      truncation=True, 
+                                      return_tensors='pt')
+        predictions = self.model(**encoded_data).logits
+        predictions = F.softmax(predictions, dim=-1)
+        predictions = predictions.detach().numpy()
+        # round to the nearest integer
+        predictions = np.rint(predictions)
+        nonzeros = predictions.nonzero()
+
+        for data_idx, label_idx in zip(*nonzeros):
+            label_to_data_idx_map[label_idx].append(data_idx)
+
+        return label_to_data_idx_map
+    
+
+    def predict_fn(self,
+                   texts: List[str]) -> np.ndarray:
+
+        preprocessed_texts = [self.__preprocess_text(t) for t in texts]
+        encoded_data = self.tokenizer(preprocessed_texts, 
+                                      padding=True, 
+                                      truncation=True,
+                                      return_tensors='pt')
+        pred = self.model(**encoded_data).logits
+        pred = F.softmax(pred, dim=-1).detach().numpy()
+        return pred
+    
+    
+    def __preprocess_text(self,
+                          text: str)-> str:
+        tokens = []
+        
+        # split words into single terms
+        for term in text.split():
+            if '_' in term:
+                # term is a noun chunk
+                tokens += term.split('_')
+            else:
+                # term is a single word/term
+                tokens.append(term)
+        
+        preprocessed_text = ' '.join(tokens)
+        return preprocessed_text
