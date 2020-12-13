@@ -5,36 +5,33 @@ import seaborn as sns
 sns.set()
 
 
-def compare_boxplots(data_a, data_b, label_a, label_b, use_plotly, figsize=(16,8)):
+def compare_boxplots(data_list, labels, use_plotly, figsize=(16,8)):
     if use_plotly:
         fig = go.Figure()
-        fig.add_trace(go.Box(y=data_a, name=label_a))
-        fig.add_trace(go.Box(y=data_b, name=label_b))
+        for i, data in enumerate(data_list):
+            fig.add_trace(go.Box(y=data, name=labels[i]))
         return fig.show()
     else:
         fig, ax = plt.subplots(figsize=figsize)
-        ax.boxplot([data_a, data_b], labels=[label_a, label_b])
+        ax.boxplot(data_list, labels=labels)
         plt.show()
         
         
-def compare_lineplots(data_x, data_ya, data_yb, label_a, label_b, x_label, y_label, use_plotly, figsize=(12,8)):
+def compare_lineplots(x_data, y_data_list, labels, x_label, y_label, use_plotly, figsize=(12,8)):
     if use_plotly:
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=data_x,
-                                 y=data_ya,
-                                 mode='markers+lines',
-                                 name=label_a))
-        fig.add_trace(go.Scatter(x=data_x,
-                                 y=data_yb,
-                                 mode='markers+lines',
-                                 name=label_b))
+        for i, y_data in enumerate(y_data_list):
+            fig.add_trace(go.Scatter(x=x_data, 
+                                     y=y_data, 
+                                     mode='markers+lines', 
+                                     name=labels[i]))
         fig.update_layout(xaxis_title=x_label,yaxis_title=y_label)
         fig.show()
     
     else:
         fig, ax = plt.subplots(figsize=figsize)
-        ax.plot(data_x, data_ya, label=label_a)
-        ax.plot(data_x, data_yb, label=label_b)
+        for i, y_data in enumerate(y_data_list):
+            ax.plot(x_data, y_data, label=labels[i])
         plt.legend(loc="lower right")
         plt.xlabel(x_label)
         plt.ylabel(y_label)

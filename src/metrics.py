@@ -59,14 +59,14 @@ def compute_metrics(entity_id, gt_dict, terms, tidy_text=True):
     metrics_dict = {}
     metrics_dict['entity'] = entity_id
     metrics_dict['k_recall'] = None
-    metrics_dict['max_f1score_at_k'] = []
+    metrics_dict['max_f1score_at_k'] = [0]
     metrics_dict['argmax_f1score'] = None
-    metrics_dict['max_f2score_at_k'] = []
-    metrics_dict['max_f05score_at_k'] = []
+    metrics_dict['max_f2score_at_k'] = [0]
+    metrics_dict['max_f05score_at_k'] = [0]
     metrics_dict['max_recall'] = None
     metrics_dict['max_precision'] = None
-    metrics_dict['max_recall_at_k'] = []
-    metrics_dict['max_precision_at_k'] = []
+    metrics_dict['max_recall_at_k'] = [0]
+    metrics_dict['max_precision_at_k'] = [0]
     
     # compute k_recall
     k_recall_threshold = 0.9
@@ -86,7 +86,7 @@ def compute_metrics(entity_id, gt_dict, terms, tidy_text=True):
         metrics_dict['max_f1score_at_k'].append(max_f1score)
     
     # compute argmax_f1score
-    metrics_dict['argmax_f1score'] = max(list(range(size)), key=lambda i: f1score_list[i])
+    metrics_dict['argmax_f1score'] = max(list(range(size)), key=lambda i: f1score_list[i]) + 1 # starts from zero
     
     # compute max_f2score_at_k
     max_f2score = -1
