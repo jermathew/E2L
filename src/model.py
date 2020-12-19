@@ -10,6 +10,7 @@ from training import TrainingCorpus
 from keras.preprocessing.sequence import pad_sequences
 from keras.models import load_model
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
 import torch.nn.functional as F
 
 __pdoc__ = {}
@@ -223,25 +224,52 @@ class TensorflowTfIdfModel(Model):
 class BertModel(Model):
 
     def __init__(self, 
-                 dir_path: str):
+                 dir_path: str, 
+                 batch_size: int = 256,
+                 use_cuda: bool = False):
         
         self.tokenizer = AutoTokenizer.from_pretrained(dir_path)
+        self.batch_size = batch_size
+        self.use_cuda = use_cuda
         model = AutoModelForSequenceClassification.from_pretrained(dir_path, from_tf=True)
+        if self.use_cuda:
+            model.cuda()
         super().__init__(model)
+    
+    
+    def __chunks(self, lst, n):
+        for i in range(0, len(lst), n):
+            yield lst[i:i + n]
 
-
+   
     def label_to_data_idx(self,
                           data: TrainingCorpus) -> Dict[int, List[int]]:
-
+            
         label_to_data_idx_map = defaultdict(list)
+        predictions_list = []
+        texts = [' '.join(data.get_tokens(doc_id)) for doc_id in data.docs]
         
-        encoded_data = self.tokenizer([' '.join(data.get_tokens(doc_id)) for doc_id in data.docs],
-                                      padding=True, 
-                                      truncation=True, 
-                                      return_tensors='pt')
-        predictions = self.model(**encoded_data).logits
-        predictions = F.softmax(predictions, dim=-1)
-        predictions = predictions.detach().numpy()
+        for batch in self.__chunks(texts, self.batch_size):
+            encoded_batch = self.tokenizer(batch,
+                                           padding=True, 
+                                           truncation=True, 
+                                           return_tensors='pt')
+            if self.use_cuda:
+                encoded_batch.to('cuda')
+            
+            predictions_batch = self.model(**encoded_batch).logits
+            predictions_batch = F.softmax(predictions_batch, dim=-1)
+            
+            if self.use_cuda:
+                predictions_batch = predictions_batch.cpu()
+            
+            predictions_batch = predictions_batch.detach().numpy()
+            predictions_list.append(predictions_batch)
+        
+        # concatenate all batches
+        predictions = np.concatenate(predictions_list, axis=0)
+        assert predictions.shape[0] == len(texts)
+        
         # round to the nearest integer
         predictions = np.rint(predictions)
         nonzeros = predictions.nonzero()
@@ -254,14 +282,35 @@ class BertModel(Model):
 
     def predict_fn(self,
                    texts: List[str]) -> np.ndarray:
-
+        
+        if self.use_cuda:
+            # empty cache
+            torch.cuda.empty_cache()
+            
         preprocessed_texts = [self.__preprocess_text(t) for t in texts]
-        encoded_data = self.tokenizer(preprocessed_texts, 
-                                      padding=True, 
-                                      truncation=True,
-                                      return_tensors='pt')
-        pred = self.model(**encoded_data).logits
-        pred = F.softmax(pred, dim=-1).detach().numpy()
+        pred_list = []
+        
+        for batch in self.__chunks(preprocessed_texts, self.batch_size):
+            encoded_batch = self.tokenizer(batch, 
+                                           padding=True, 
+                                           truncation=True,
+                                           return_tensors='pt')
+            if self.use_cuda:
+                encoded_batch.to('cuda')
+            
+            pred_batch = self.model(**encoded_batch).logits
+            pred_batch = F.softmax(pred_batch, dim=-1)
+            
+            if self.use_cuda:
+                pred_batch = pred_batch.cpu()
+            
+            pred_batch = pred_batch.detach().numpy()
+            pred_list.append(pred_batch)
+        
+        # concatenate all batches
+        pred = np.concatenate(pred_list, axis=0)
+        assert pred.shape[0] == len(preprocessed_texts)
+        
         return pred
     
     
