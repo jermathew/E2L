@@ -226,12 +226,12 @@ class BertModel(Model):
     def __init__(self, 
                  dir_path: str, 
                  batch_size: int = 256,
-                 use_cuda: bool = False):
+                 use_cuda: bool = False, from_tf=True):
         
         self.tokenizer = AutoTokenizer.from_pretrained(dir_path)
         self.batch_size = batch_size
         self.use_cuda = use_cuda
-        model = AutoModelForSequenceClassification.from_pretrained(dir_path, from_tf=True)
+        model = AutoModelForSequenceClassification.from_pretrained(dir_path, from_tf=from_tf)
         if self.use_cuda:
             model.cuda()
         super().__init__(model)
