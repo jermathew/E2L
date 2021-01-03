@@ -257,13 +257,14 @@ class BertModel(Model):
             if self.use_cuda:
                 encoded_batch.to('cuda')
             
-            predictions_batch = self.model(**encoded_batch).logits
-            predictions_batch = F.softmax(predictions_batch, dim=-1)
+            with torch.no_grad():
+                predictions_batch = self.model(**encoded_batch).logits
+                predictions_batch = F.softmax(predictions_batch, dim=-1)
             
             if self.use_cuda:
                 predictions_batch = predictions_batch.cpu()
             
-            predictions_batch = predictions_batch.detach().numpy()
+            predictions_batch = predictions_batch.numpy()
             predictions_list.append(predictions_batch)
         
         # concatenate all batches
@@ -298,13 +299,14 @@ class BertModel(Model):
             if self.use_cuda:
                 encoded_batch.to('cuda')
             
-            pred_batch = self.model(**encoded_batch).logits
-            pred_batch = F.softmax(pred_batch, dim=-1)
+            with torch.no_grad():
+                pred_batch = self.model(**encoded_batch).logits
+                pred_batch = F.softmax(pred_batch, dim=-1)
             
             if self.use_cuda:
                 pred_batch = pred_batch.cpu()
             
-            pred_batch = pred_batch.detach().numpy()
+            pred_batch = pred_batch.numpy()
             pred_list.append(pred_batch)
         
         # concatenate all batches
